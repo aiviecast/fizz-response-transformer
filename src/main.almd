@@ -1,0 +1,26 @@
+// CLI エントリポイント (native) — カタログ照合と重み付き選択の目視確認(shizuku transforms の一部)。
+import self as rt
+import json
+import value
+
+effect fn main() -> Unit = {
+  // shizuku transforms.json の一部(name, weight)。
+  let names = ["pivot-to-economy", "meta-ai-tease", "list-parody", "direct", "callback-world-asset"]
+  let weights = [0.7, 1.1, 1.0, 0.5, 1.2]
+  // trigger-matcher の候補(好き → meta-ai-tease, list-parody)。
+  let candidates = ["meta-ai-tease", "list-parody"]
+  println(json.stringify(value.object([
+    ("count", value.int(rt.count(names))),
+    ("is_known_direct", value.bool(rt.is_known(names, "direct"))),
+    ("is_known_xxx", value.bool(rt.is_known(names, "xxx"))),
+    ("weight_meta", value.float(rt.weight_of(names, weights, "meta-ai-tease"))),
+    ("weight_unknown", value.float(rt.weight_of(names, weights, "nope"))),
+    ("argmax", value.int(rt.argmax_weight(weights))),
+    ("total_weight", value.float(rt.total_weight(weights))),
+    // candidates(meta 1.1 / list 1.0, total 2.1)。value 0.4 → cum 1.1 > 0.84 → meta-ai-tease
+    ("pick_lo", value.str(rt.pick_candidate(names, weights, candidates, 0.4))),
+    // value 0.9 → target 1.89、cum 1.1(<1.89) → 2.1(>1.89) → list-parody
+    ("pick_hi", value.str(rt.pick_candidate(names, weights, candidates, 0.9))),
+    ("pick_empty", value.str(rt.pick_candidate(names, weights, [], 0.5))),
+  ])))
+}

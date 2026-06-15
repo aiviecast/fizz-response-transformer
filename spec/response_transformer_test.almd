@@ -1,0 +1,57 @@
+import self as rt
+import float
+import list
+
+fn names() -> List[String] = ["pivot-to-economy", "meta-ai-tease", "list-parody", "direct", "callback-world-asset"]
+fn weights() -> List[Float] = [0.7, 1.1, 1.0, 0.5, 1.2]
+
+fn milli(x: Float) -> Int = float.to_int(float.round(x * 1000.0))
+
+test "count / index_of / is_known" {
+  assert_eq(rt.count(names()), 5)
+  assert_eq(rt.index_of(names(), "list-parody"), 2)
+  assert_eq(rt.index_of(names(), "nope"), -1)
+  assert_eq(rt.is_known(names(), "direct"), true)
+  assert_eq(rt.is_known(names(), "xxx"), false)
+}
+
+test "weight_of" {
+  assert_eq(milli(rt.weight_of(names(), weights(), "meta-ai-tease")), 1100)
+  assert_eq(milli(rt.weight_of(names(), weights(), "pivot-to-economy")), 700)
+  assert_eq(milli(rt.weight_of(names(), weights(), "nope")), -1000)  // 未知 = -1.0
+}
+
+test "total_weight / argmax_weight" {
+  assert_eq(milli(rt.total_weight(weights())), 4500)
+  assert_eq(rt.argmax_weight(weights()), 4)   // 1.2 が最大
+  assert_eq(rt.argmax_weight([]), -1)
+}
+
+test "normalize: 合計 1.0" {
+  let nw = rt.normalize(weights())
+  assert_eq(list.len(nw), 5)
+  // 合計 = 1.0
+  assert_eq(milli(rt.total_weight(nw)), 1000)
+  // pivot 0.7/4.5 = 0.1556
+  assert_eq(milli(list.get_or(nw, 0, 0.0)), 156)
+}
+
+test "pick_by_value: 累積重み選択" {
+  // weights [0.7,1.1,1.0,0.5,1.2] total 4.5
+  assert_eq(rt.pick_by_value(weights(), 0.0), 0)    // target 0 → cum 0.7>0 → idx0
+  assert_eq(rt.pick_by_value(weights(), 0.99), 4)   // target 4.455 → 最後の区間
+  assert_eq(rt.pick_by_value([], 0.5), -1)          // 空
+  assert_eq(rt.pick_by_value([0.0, 0.0], 0.5), -1)  // 合計 0
+}
+
+test "pick_candidate: 候補からの重み付き選択" {
+  let cands = ["meta-ai-tease", "list-parody"]   // 1.1 / 1.0, total 2.1
+  // value 0.4 → target 0.84 → cum meta 1.1 > 0.84 → meta-ai-tease
+  assert_eq(rt.pick_candidate(names(), weights(), cands, 0.4), "meta-ai-tease")
+  // value 0.9 → target 1.89 → cum 1.1, +1.0=2.1 > 1.89 → list-parody
+  assert_eq(rt.pick_candidate(names(), weights(), cands, 0.9), "list-parody")
+  // カタログに無い候補は無視
+  assert_eq(rt.pick_candidate(names(), weights(), ["unknown-x"], 0.5), "")
+  // 候補空
+  assert_eq(rt.pick_candidate(names(), weights(), [], 0.5), "")
+}

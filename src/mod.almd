@@ -1,0 +1,104 @@
+// fizz_response_transformer — 応答変換カタログ + 重み付き選択(§10 response-transformer)。
+//
+// 責務 (一行): persona の transforms.json(name / weight / renderer_hint …)をカタログとして
+// 扱い、trigger-matcher が出した候補 transform から weight に基づいて 1 つを選ぶ。
+//
+// 実際の変換テキスト生成は LLM(renderer_hint がプロンプトを誘導)= host の責務。
+// カタログの照合・weight 正規化・候補からの選択は純粋なので Almide に集約=単一の正本。
+// カタログはペルソナ別データなので埋め込まず、name/weight の並行リストで受け取る。
+// 移植元: openaituber kotodama/personae/*/transforms.json + persona_spec.rs::TransformsDoc。
+
+import list
+import float
+
+// カタログ件数。
+fn count(names: List[String]) -> Int = list.len(names)
+
+// name のカタログ内 index(0-based)。未知は -1。
+fn index_of(names: List[String], name: String) -> Int = list.index_of(names, name) ?? -1
+
+// name が既知の transform か。
+fn is_known(names: List[String], name: String) -> Bool = list.contains(names, name)
+
+// name の weight。未知は -1.0。names[i] と weights[i] が対応。
+fn weight_of(names: List[String], weights: List[Float], name: String) -> Float = {
+  let idx = index_of(names, name)
+  if idx < 0 then -1.0 else list.get_or(weights, idx, 0.0)
+}
+
+// weight 合計。
+fn total_weight(weights: List[Float]) -> Float = {
+  var acc = 0.0
+  var i = 0
+  let n = list.len(weights)
+  while i < n {
+    acc = acc + list.get_or(weights, i, 0.0)
+    i = i + 1
+  }
+  acc
+}
+
+// weight を 0..1 に正規化(各 / 合計)。合計 0 なら全て 0。
+fn normalize(weights: List[Float]) -> List[Float] = {
+  let total = total_weight(weights)
+  var acc: List[Float] = []
+  var i = 0
+  let n = list.len(weights)
+  while i < n {
+    let w = list.get_or(weights, i, 0.0)
+    list.push(acc, if total <= 0.0 then 0.0 else w / total)
+    i = i + 1
+  }
+  acc
+}
+
+// 最大 weight の index(同値は先勝ち)。空なら -1。
+fn argmax_weight(weights: List[Float]) -> Int = {
+  var best = -1
+  var bestw = 0.0
+  var i = 0
+  let n = list.len(weights)
+  while i < n {
+    let w = list.get_or(weights, i, 0.0)
+    if best < 0 or w > bestw then { best = i; bestw = w } else {}
+    i = i + 1
+  }
+  best
+}
+
+// 累積 weight 選択: value01 ∈ [0,1) を weight 比率で割り当てた index に変換(決定的)。
+// 重みの大きい transform ほど広い区間 → 当たりやすい。合計 0 / 空なら -1。
+fn pick_by_value(weights: List[Float], value01: Float) -> Int = {
+  let total = total_weight(weights)
+  let n = list.len(weights)
+  if total <= 0.0 or n == 0 then -1 else {
+    let target = value01 * total
+    var cum = 0.0
+    var chosen = -1
+    var i = 0
+    while i < n {
+      cum = cum + list.get_or(weights, i, 0.0)
+      if chosen < 0 and cum > target then chosen = i else {}
+      i = i + 1
+    }
+    if chosen < 0 then n - 1 else chosen
+  }
+}
+
+// trigger-matcher の候補から実際に適用する transform を選ぶ:
+//   candidates のうちカタログに存在するものを weight 付きで集め、value01 で重み付き選択。
+//   カタログに無い候補は無視。選べなければ ""(呼び出し側は direct fallback)。
+fn pick_candidate(names: List[String], weights: List[Float], candidates: List[String], value01: Float) -> String = {
+  var cnames: List[String] = []
+  var cweights: List[Float] = []
+  var i = 0
+  let n = list.len(candidates)
+  while i < n {
+    let c = list.get_or(candidates, i, "")
+    let idx = index_of(names, c)
+    if idx >= 0 then { list.push(cnames, c); list.push(cweights, list.get_or(weights, idx, 0.0)) } else {}
+    i = i + 1
+  }
+  let pick = pick_by_value(cweights, value01)
+  if pick < 0 then "" else list.get_or(cnames, pick, "")
+}

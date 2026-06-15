@@ -1,0 +1,78 @@
+// wasm — kotodama analyzer / ブラウザ側から呼ぶ。
+//   host が 3 バッファに書く: カタログ名(改行区切り)/ weight(改行区切りの数値)/
+//   候補名(改行区切り)。各バッファは from_list(to_list) コピー経由で文字列化(almide#690)。
+//   選択結果(transform 名)は out_ptr で読む。
+import self as rt
+import bytes
+import float
+import int
+import list
+import string
+
+var g_names: Bytes = bytes.new(0)
+var g_weights: Bytes = bytes.new(0)
+var g_candidates: Bytes = bytes.new(0)
+var g_out: Bytes = bytes.new(0)
+
+@export(wasm, "names_alloc")
+fn names_alloc(len: Float) -> RawPtr = { g_names = bytes.new(float.to_int(len)); bytes.as_mut_ptr(g_names) }
+
+@export(wasm, "weights_alloc")
+fn weights_alloc(len: Float) -> RawPtr = { g_weights = bytes.new(float.to_int(len)); bytes.as_mut_ptr(g_weights) }
+
+@export(wasm, "candidates_alloc")
+fn candidates_alloc(len: Float) -> RawPtr = { g_candidates = bytes.new(float.to_int(len)); bytes.as_mut_ptr(g_candidates) }
+
+@export(wasm, "out_ptr")
+fn out_ptr() -> RawPtr = bytes.as_mut_ptr(g_out)
+
+fn s_names() -> List[String] = string.split(bytes.to_string_lossy(bytes.from_list(bytes.to_list(g_names))), "\n")
+fn s_candidates() -> List[String] = string.split(bytes.to_string_lossy(bytes.from_list(bytes.to_list(g_candidates))), "\n")
+
+// weight blob(改行区切りの数値)を List[Float] に。パース失敗は 0.0。
+fn parse_f(s: String) -> Float = match float.parse(string.trim(s)) {
+  ok(v)  => v,
+  err(_) => 0.0,
+}
+fn s_weights() -> List[Float] = {
+  let lines = string.split(bytes.to_string_lossy(bytes.from_list(bytes.to_list(g_weights))), "\n")
+  var acc: List[Float] = []
+  var i = 0
+  let n = list.len(lines)
+  while i < n {
+    list.push(acc, parse_f(list.get_or(lines, i, "")))
+    i = i + 1
+  }
+  acc
+}
+
+@export(wasm, "count")
+fn w_count() -> Float = int.to_float(rt.count(s_names()))
+
+@export(wasm, "argmax_weight")
+fn w_argmax() -> Float = int.to_float(rt.argmax_weight(s_weights()))
+
+@export(wasm, "total_weight")
+fn w_total_weight() -> Float = rt.total_weight(s_weights())
+
+@export(wasm, "pick_by_value")
+fn w_pick_by_value(value01: Float) -> Float = int.to_float(rt.pick_by_value(s_weights(), value01))
+
+// 候補から重み付き選択した transform 名を g_out に書き、長さを返す。
+@export(wasm, "pick_candidate_resolve")
+fn w_pick_candidate(value01: Float) -> Float = {
+  let s = rt.pick_candidate(s_names(), s_weights(), s_candidates(), value01)
+  g_out = bytes.from_string(s)
+  int.to_float(list.len(string.to_bytes(s)))
+}
+
+effect fn main() -> Unit = {
+  let _a = names_alloc(1.0)
+  let _b = weights_alloc(1.0)
+  let _c = candidates_alloc(1.0)
+  let _d = w_count()
+  let _e = w_argmax()
+  let _f = w_pick_candidate(0.5)
+  let _g = out_ptr()
+  ()
+}
