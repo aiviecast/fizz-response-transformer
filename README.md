@@ -4,7 +4,7 @@ kotodama の **応答変換カタログ + 重み付き選択**。Almide 1 コア
 openaituber `kotodama/personae/*/transforms.json` のカタログ照合・選択を切り出した単一責任部品(§10)。
 
 persona の transforms(`name / weight / renderer_hint …`)をカタログとして扱い、
-[fizz-trigger-matcher](https://github.com/Aid-On/fizz-trigger-matcher) が出した候補から **weight に基づいて 1 つ選ぶ**。
+[fizz-trigger-matcher](https://github.com/aiviecast/fizz-trigger-matcher) が出した候補から **weight に基づいて 1 つ選ぶ**。
 
 > **実際の変換テキスト生成は LLM**(選ばれた transform の `renderer_hint` がプロンプトを誘導)= host の責務。
 > ここはカタログ照合・weight 正規化・候補からの決定的選択だけを担う。
