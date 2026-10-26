@@ -9,19 +9,19 @@ import int
 import list
 import string
 
-var g_names: Bytes = bytes.new(0)
-var g_weights: Bytes = bytes.new(0)
-var g_candidates: Bytes = bytes.new(0)
-var g_out: Bytes = bytes.new(0)
+var g_names: Bytes = bytes.zeros(0)
+var g_weights: Bytes = bytes.zeros(0)
+var g_candidates: Bytes = bytes.zeros(0)
+var g_out: Bytes = bytes.zeros(0)
 
 @export(wasm, "names_alloc")
-fn names_alloc(len: Float) -> RawPtr = { g_names = bytes.new(float.to_int(len)); bytes.as_mut_ptr(g_names) }
+fn names_alloc(len: Float) -> RawPtr = { g_names = bytes.zeros(int.from_saturating(len)); bytes.as_mut_ptr(g_names) }
 
 @export(wasm, "weights_alloc")
-fn weights_alloc(len: Float) -> RawPtr = { g_weights = bytes.new(float.to_int(len)); bytes.as_mut_ptr(g_weights) }
+fn weights_alloc(len: Float) -> RawPtr = { g_weights = bytes.zeros(int.from_saturating(len)); bytes.as_mut_ptr(g_weights) }
 
 @export(wasm, "candidates_alloc")
-fn candidates_alloc(len: Float) -> RawPtr = { g_candidates = bytes.new(float.to_int(len)); bytes.as_mut_ptr(g_candidates) }
+fn candidates_alloc(len: Float) -> RawPtr = { g_candidates = bytes.zeros(int.from_saturating(len)); bytes.as_mut_ptr(g_candidates) }
 
 @export(wasm, "out_ptr")
 fn out_ptr() -> RawPtr = bytes.as_mut_ptr(g_out)
@@ -40,30 +40,30 @@ fn s_weights() -> List[Float] = {
   var i = 0
   let n = list.len(lines)
   while i < n {
-    list.push(acc, parse_f(list.get_or(lines, i, "")))
+    list.push(acc, parse_f(list.get(lines, i) ?? ""))
     i = i + 1
   }
   acc
 }
 
 @export(wasm, "count")
-fn w_count() -> Float = int.to_float(rt.count(s_names()))
+fn w_count() -> Float = float.from(rt.count(s_names()))
 
 @export(wasm, "argmax_weight")
-fn w_argmax() -> Float = int.to_float(rt.argmax_weight(s_weights()))
+fn w_argmax() -> Float = float.from(rt.argmax_weight(s_weights()))
 
 @export(wasm, "total_weight")
 fn w_total_weight() -> Float = rt.total_weight(s_weights())
 
 @export(wasm, "pick_by_value")
-fn w_pick_by_value(value01: Float) -> Float = int.to_float(rt.pick_by_value(s_weights(), value01))
+fn w_pick_by_value(value01: Float) -> Float = float.from(rt.pick_by_value(s_weights(), value01))
 
 // 候補から重み付き選択した transform 名を g_out に書き、長さを返す。
 @export(wasm, "pick_candidate_resolve")
 fn w_pick_candidate(value01: Float) -> Float = {
   let s = rt.pick_candidate(s_names(), s_weights(), s_candidates(), value01)
   g_out = bytes.from_string(s)
-  int.to_float(list.len(string.to_bytes(s)))
+  float.from(list.len(bytes.to_list(bytes.from_string(s))))
 }
 
 effect fn main() -> Unit = {

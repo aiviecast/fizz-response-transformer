@@ -5,7 +5,7 @@ import list
 fn names() -> List[String] = ["pivot-to-economy", "meta-ai-tease", "list-parody", "direct", "callback-world-asset"]
 fn weights() -> List[Float] = [0.7, 1.1, 1.0, 0.5, 1.2]
 
-fn milli(x: Float) -> Int = float.to_int(float.round(x * 1000.0))
+fn milli(x: Float) -> Int = int.from_saturating(float.round(x * 1000.0))
 
 test "count / index_of / is_known" {
   assert_eq(rt.count(names()), 5)
@@ -33,7 +33,7 @@ test "normalize: 合計 1.0" {
   // 合計 = 1.0
   assert_eq(milli(rt.total_weight(nw)), 1000)
   // pivot 0.7/4.5 = 0.1556
-  assert_eq(milli(list.get_or(nw, 0, 0.0)), 156)
+  assert_eq(milli(list.get(nw, 0) ?? 0.0), 156)
 }
 
 test "pick_by_value: 累積重み選択" {

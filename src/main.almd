@@ -18,9 +18,9 @@ effect fn main() -> Unit = {
     ("argmax", value.int(rt.argmax_weight(weights))),
     ("total_weight", value.float(rt.total_weight(weights))),
     // candidates(meta 1.1 / list 1.0, total 2.1)。value 0.4 → cum 1.1 > 0.84 → meta-ai-tease
-    ("pick_lo", value.str(rt.pick_candidate(names, weights, candidates, 0.4))),
+    ("pick_lo", value.string(rt.pick_candidate(names, weights, candidates, 0.4))),
     // value 0.9 → target 1.89、cum 1.1(<1.89) → 2.1(>1.89) → list-parody
-    ("pick_hi", value.str(rt.pick_candidate(names, weights, candidates, 0.9))),
-    ("pick_empty", value.str(rt.pick_candidate(names, weights, [], 0.5))),
+    ("pick_hi", value.string(rt.pick_candidate(names, weights, candidates, 0.9))),
+    ("pick_empty", value.string(rt.pick_candidate(names, weights, [], 0.5))),
   ])))
 }
