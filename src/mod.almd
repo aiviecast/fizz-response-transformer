@@ -9,7 +9,6 @@
 // 移植元: openaituber kotodama/personae/*/transforms.json + persona_spec.rs::TransformsDoc。
 
 import list
-import float
 
 // カタログ件数。
 fn count(names: List[String]) -> Int = list.len(names)
@@ -23,7 +22,7 @@ fn is_known(names: List[String], name: String) -> Bool = list.contains(names, na
 // name の weight。未知は -1.0。names[i] と weights[i] が対応。
 fn weight_of(names: List[String], weights: List[Float], name: String) -> Float = {
   let idx = index_of(names, name)
-  if idx < 0 then -1.0 else list.get_or(weights, idx, 0.0)
+  if idx < 0 then -1.0 else list.get(weights, idx) ?? 0.0
 }
 
 // weight 合計。
@@ -32,7 +31,7 @@ fn total_weight(weights: List[Float]) -> Float = {
   var i = 0
   let n = list.len(weights)
   while i < n {
-    acc = acc + list.get_or(weights, i, 0.0)
+    acc = acc + (list.get(weights, i) ?? 0.0)
     i = i + 1
   }
   acc
@@ -45,7 +44,7 @@ fn normalize(weights: List[Float]) -> List[Float] = {
   var i = 0
   let n = list.len(weights)
   while i < n {
-    let w = list.get_or(weights, i, 0.0)
+    let w = list.get(weights, i) ?? 0.0
     list.push(acc, if total <= 0.0 then 0.0 else w / total)
     i = i + 1
   }
@@ -59,7 +58,7 @@ fn argmax_weight(weights: List[Float]) -> Int = {
   var i = 0
   let n = list.len(weights)
   while i < n {
-    let w = list.get_or(weights, i, 0.0)
+    let w = list.get(weights, i) ?? 0.0
     if best < 0 or w > bestw then { best = i; bestw = w } else {}
     i = i + 1
   }
@@ -77,7 +76,7 @@ fn pick_by_value(weights: List[Float], value01: Float) -> Int = {
     var chosen = -1
     var i = 0
     while i < n {
-      cum = cum + list.get_or(weights, i, 0.0)
+      cum = cum + (list.get(weights, i) ?? 0.0)
       if chosen < 0 and cum > target then chosen = i else {}
       i = i + 1
     }
@@ -94,11 +93,11 @@ fn pick_candidate(names: List[String], weights: List[Float], candidates: List[St
   var i = 0
   let n = list.len(candidates)
   while i < n {
-    let c = list.get_or(candidates, i, "")
+    let c = list.get(candidates, i) ?? ""
     let idx = index_of(names, c)
-    if idx >= 0 then { list.push(cnames, c); list.push(cweights, list.get_or(weights, idx, 0.0)) } else {}
+    if idx >= 0 then { list.push(cnames, c); list.push(cweights, list.get(weights, idx) ?? 0.0) } else {}
     i = i + 1
   }
   let pick = pick_by_value(cweights, value01)
-  if pick < 0 then "" else list.get_or(cnames, pick, "")
+  if pick < 0 then "" else list.get(cnames, pick) ?? ""
 }
