@@ -9,7 +9,6 @@
 // 移植元: openaituber kotodama/personae/*/transforms.json + persona_spec.rs::TransformsDoc。
 
 import list
-import float
 
 // カタログ件数。
 fn count(names: List[String]) -> Int = list.len(names)
@@ -32,7 +31,7 @@ fn total_weight(weights: List[Float]) -> Float = {
   var i = 0
   let n = list.len(weights)
   while i < n {
-    acc = acc + list.get(weights, i) ?? 0.0
+    acc = acc + (list.get(weights, i) ?? 0.0)
     i = i + 1
   }
   acc
@@ -77,7 +76,7 @@ fn pick_by_value(weights: List[Float], value01: Float) -> Int = {
     var chosen = -1
     var i = 0
     while i < n {
-      cum = cum + list.get(weights, i) ?? 0.0
+      cum = cum + (list.get(weights, i) ?? 0.0)
       if chosen < 0 and cum > target then chosen = i else {}
       i = i + 1
     }
